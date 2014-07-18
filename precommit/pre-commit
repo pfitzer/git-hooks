@@ -1,0 +1,53 @@
+#!/usr/bin/php
+<?php
+/**
+ * find all changed files and save them in $modified
+ */
+exec('git diff --cached --name-status --diff-filter=ACM', $modified);
+exec('which phpmd', $phpMd);
+$mdInstalled = (bool)count($phpMd);
+foreach ($modified as $file) {
+    $fileName = trim(substr($file, 1) );
+    if (pathinfo($fileName,PATHINFO_EXTENSION) == "php") {
+        $cmdOuput = array();
+        /**
+         *
+         * linting
+         */
+        exec("php -l " . escapeshellarg($fileName), $cmdOuput, $return);
+        output($return, $cmdOuput);
+        /**
+         * if php messdedector ist installed
+         */
+        if (true === $mdInstalled) {
+            /**
+             * check for unused code
+             */
+                exec("phpmd " . escapeshellarg($fileName) . " text unusedcode", $cmdOuput, $return);
+                output($return, $cmdOuput);
+            /**
+             * checkot for codesize
+             */
+            exec("phpmd " . escapeshellarg($fileName) . " text codesize", $cmdOuput, $return);
+                output($return, $cmdOuput, '', false);
+        }
+    }
+}
+/**
+ *
+ * @param int $return
+ * @param array $cmdOuput
+ * @param string $errMsg additional error messages
+ * @param bool $exit 
+*/
+function output($return, $cmdOuput, $errMsg = '', $exit = true)
+{
+    if ($return != 0) {
+       echo implode("\n", $cmdOuput), "\n";
+       echo $errMsg;
+       if (true === $exit) {
+           exit(1);
+       }
+    }
+}
+exit(0);
